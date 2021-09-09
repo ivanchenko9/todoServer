@@ -1,9 +1,24 @@
 const http = require('http')
 const url = require('url')
 
+const confirmeAllTasks = () => {
+    if(todosData.isCompletedAll){
+         const newArray = todosData.todosAll.map(todo => ({
+            ...todo,
+            isCompleted: false
+        }))
+    } else {
+        const newArray = todosData.todosAll.map(todo => ({
+            ...todo,
+            isCompleted: true
+        }))
+    }
+    todosData.isCompletedAll = !todosData.isCompletedAll
+}
+
 const todosData = {
     todosAll: [],
-    confirmeAllStatus: false
+    isCompletedAll: false
 }
 
 http.createServer( (request, response) => {
@@ -26,11 +41,20 @@ http.createServer( (request, response) => {
         case 'POST':
             const urlRequest = url.parse(request.url, true)
             if (urlRequest.query.delete){
-                const idToDelete = Number(urlRequest.query.delete)
-                todosData.todosAll = todosData.todosAll.filter(todo => todo.id !== idToDelete)
-                response.end(JSON.stringify(todosData.todosAll))
+                console.log('urlRequest.query.delete...')
+                let body = ''
+                request.on('data', (chunk) => {
+                    body += chunk.toString()
+                })
+                request.on('end', () => {
+                    const parsedDeleteforTodo = JSON.parse(body)
+                    todosData.todosAll = todosData.todosAll.filter(todo => todo.id !== parsedDeleteforTodo.id)
+                    const newTodosAll = JSON.stringify(todosData.todosAll)
+                    response.end(newTodosAll)
+                })
             }
             else if (urlRequest.query.update) {
+                console.log('urlRequest.query.update...')
                 let body = ''
                 request.on('data', (chunk) => {
                     body += chunk.toString()
@@ -41,7 +65,7 @@ http.createServer( (request, response) => {
                         if(todo.id === Number(parsedUpdateforTodo.id)){
                             return {
                                 ...todo,
-                                isConfirmed: !todo.isConfirmed
+                                isCompleted: !todo.isCompleted
                             }
                         }
                         else {
@@ -52,8 +76,21 @@ http.createServer( (request, response) => {
                     response.end(newTodosAll)
                 })
             }
+            else if (urlRequest.query.cleardone) {
+                console.log('urlRequest.query.cleardone...')
+                todosData.todosAll = todosData.todosAll.filter( todo => todo.isCompleted !== true)
+                const newTodosAll = JSON.stringify(todosData.todosAll)
+                response.end(newTodosAll)
+            }
+            else if (urlRequest.query.confirmall) {
+                console.log('urlRequest.query.confirmall...')
+                confirmeAllTasks()
+                const newTodosData = JSON.stringify(todosData)
+                response.end(newTodosData)
+            }
             else
             {
+                console.log('POST...')
                 let body = ''
                 request.on('data', (chunk) => {
                     body += chunk.toString()
