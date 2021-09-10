@@ -2,19 +2,22 @@ const http = require('http')
 const url = require('url')
 
 const confirmeAllTasks = () => {
+    let newArray
     if(todosData.isCompletedAll){
-         const newArray = todosData.todosAll.map(todo => ({
+        newArray = todosData.todosAll.map(todo => ({
             ...todo,
             isCompleted: false
         }))
     } else {
-        const newArray = todosData.todosAll.map(todo => ({
+        newArray = todosData.todosAll.map(todo => ({
             ...todo,
             isCompleted: true
         }))
     }
     todosData.isCompletedAll = !todosData.isCompletedAll
+    return newArray
 }
+
 
 const todosData = {
     todosAll: [],
@@ -23,23 +26,27 @@ const todosData = {
 
 http.createServer( (request, response) => {
     console.log("Server is runnig...")
+    
 
     response.setHeader('Access-Control-Allow-Origin', '*')
+    //response.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-with, Content-type, Accept, BMTVS-Domain-Origin')
     response.setHeader('Access-Control-Allow-Headers', '*')
+    response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     
-    if(request.method === 'OPTIONS') { //перед каждым POST & PUT запросами, браузер шлёт запрос с методом OPTIONS, что бы проверить, имеет ли он на это право
-        response.setHeader('Access-Control-Allow-Methods', 'PUT, POST, PATCH, DELETE, GET')
-        response.statusCode = 200
-        return response.statusCode
-        //return response.statusCode(200).json({})
+    if (request.method === 'OPTIONS'){
+        response.statusCode = 204
+        response.end()
     }
-    
-
+    const urlRequest = url.parse(request.url, true)
+    console.log(urlRequest)
     switch(request.method){
         case 'GET':
+            console.log('GET')
+            //response.statusCode = 200
             response.end(JSON.stringify(todosData))
+            break
         case 'POST':
-            const urlRequest = url.parse(request.url, true)
+            
             if (urlRequest.query.delete){
                 console.log('urlRequest.query.delete...')
                 let body = ''
@@ -50,8 +57,11 @@ http.createServer( (request, response) => {
                     const parsedDeleteforTodo = JSON.parse(body)
                     todosData.todosAll = todosData.todosAll.filter(todo => todo.id !== parsedDeleteforTodo.id)
                     const newTodosAll = JSON.stringify(todosData.todosAll)
+                    //response.statusCode = 200
                     response.end(newTodosAll)
+                    
                 })
+                break
             }
             else if (urlRequest.query.update) {
                 console.log('urlRequest.query.update...')
@@ -73,20 +83,27 @@ http.createServer( (request, response) => {
                         }
                     })
                     const newTodosAll = JSON.stringify(todosData.todosAll)
+                    //response.statusCode = 200
                     response.end(newTodosAll)
+                    
                 })
+                break
             }
             else if (urlRequest.query.cleardone) {
                 console.log('urlRequest.query.cleardone...')
                 todosData.todosAll = todosData.todosAll.filter( todo => todo.isCompleted !== true)
                 const newTodosAll = JSON.stringify(todosData.todosAll)
+                //response.statusCode = 200
                 response.end(newTodosAll)
+                break
             }
-            else if (urlRequest.query.confirmall) {
-                console.log('urlRequest.query.confirmall...')
-                confirmeAllTasks()
+            else if (urlRequest.query.completeall) {
+                console.log('urlRequest.query.completeall...')
+                todosData.todosAll = confirmeAllTasks()
                 const newTodosData = JSON.stringify(todosData)
+                response.statusCode = 200
                 response.end(newTodosData)
+                break
             }
             else
             {
@@ -99,35 +116,10 @@ http.createServer( (request, response) => {
                     const parsedInternalTodo = JSON.parse(body)
                     todosData.todosAll.push(parsedInternalTodo)
                     const newTodosAll = JSON.stringify(todosData.todosAll)
+                    //response.statusCode = 200
                     response.end(newTodosAll)
                 })
+                break
             }
-            
-
     }
-
-//     if(request.method === 'GET')
-//     {
-//     let urlRequest = url.parse(request.url, true)
-    
-//     if (Number(urlRequest.query.test) === 200){
-       
-//     }
-//     else{
-//         response.end('Unknown test paametr!')
-//     }
-// } else if(request.method === 'POST'){
-//     let body = ''
-
-//     request.on('data', chunk => {
-//         body += chunk.toString()
-//     })
-
-//     request.on('end', () => {
-//         let parsedBody = parse(body)
-//         console.log(parsedBody.title)
-//         response.end('Body requested')
-//     })
-// }
-    
 }).listen(3000)
