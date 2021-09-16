@@ -6,30 +6,21 @@ const connectionString = "mongodb://127.0.0.1:27017/todos"
 let db
 const client = new MongoClient(connectionString)
 
-
-const todosData = {
-    isCompletedAll: false
-}
-
-const completeAllTasks = (dbTodoList) => {
-    if(todosData.isCompletedAll === true){
-        dbTodoList.updateMany(
-            {},
-            { $set: { isCompleted: false }})
-            todosData.isCompletedAll = false
-            return
-    } else if(todosData.isCompletedAll === false){
+const completeAllTasks = (dbTodoList, requestedStatus) => {
+    if(requestedStatus === true){
         dbTodoList.updateMany(
             {},
             { $set: { isCompleted: true }})
-            todosData.isCompletedAll = true
+            return
+    } else if(requestedStatus === false){
+        dbTodoList.updateMany(
+            {},
+            { $set: { isCompleted: false }})
             return
     }
-    //todosData.isCompletedAll = !todosData.isCompletedAll
-    console.log(todosData.isCompletedAll)
 }
 
-function getDataFromDb(dbTodoList, response){
+ function getDataFromDb(dbTodoList){
     const newPromise = new Promise( (resolve, reject) => {
         dbTodoList
         .find().toArray((err, items) => {
@@ -37,9 +28,17 @@ function getDataFromDb(dbTodoList, response){
                 resolve(newTodoList)
         })
     })
-    newPromise.then(responseData => response.end(JSON.stringify(responseData)))
-    .catch(error => console.log(error))
+
+    const serverResponse = newPromise.then(responseData => responseData)
+    return serverResponse
 }
+
+async function sendDataToClient(dbTodoList, response, headers){
+    const rawData = await getDataFromDb(dbTodoList)
+    console.log(rawData)
+    response.writeHead(200, headers)
+    response.end(JSON.stringify(rawData))
+} 
     client.connect(
     function (err, client) {
       db = client.db()
@@ -62,8 +61,7 @@ function getDataFromDb(dbTodoList, response){
             }
     
             if(request.method === 'GET' && urlRequest.pathname === '/'){
-                response.writeHead(200, headers)
-                getDataFromDb(dbTodoList, response)
+                sendDataToClient(dbTodoList, response, headers)
                 return
             }
     
@@ -75,8 +73,7 @@ function getDataFromDb(dbTodoList, response){
                 request.on('end', () => {
                     const parsedInternalTodo = JSON.parse(body)
                     dbTodoList.insertOne({ id: parsedInternalTodo.id , title: parsedInternalTodo.title, isCompleted: parsedInternalTodo.isCompleted})
-                    response.writeHead(200, headers)
-                    getDataFromDb(dbTodoList, response)
+                    sendDataToClient(dbTodoList, response, headers)
                 })
                 return
             }
@@ -91,8 +88,7 @@ function getDataFromDb(dbTodoList, response){
                     dbTodoList.findOneAndUpdate(
                         { id: Number(parsedUpdateforTodo.id) },
                         { $set: { isCompleted: parsedUpdateforTodo.isCompleted}})
-                    response.writeHead(200, headers)
-                    getDataFromDb(dbTodoList, response)
+                    sendDataToClient(dbTodoList, response, headers)
                 })
                 return
             }
@@ -105,24 +101,28 @@ function getDataFromDb(dbTodoList, response){
                 request.on('end', () => {
                     const parsedDeleteforTodo = JSON.parse(body)
                     dbTodoList.deleteOne({ id: parsedDeleteforTodo.id})
-                    response.writeHead(200, headers)
-                    getDataFromDb(dbTodoList, response)
+                    sendDataToClient(dbTodoList, response, headers)
                 })
                 return
             }
     
             if(request.method === 'POST' && urlRequest.pathname === '/todos/cleardone'){
                 dbTodoList.deleteMany({ isCompleted: true})
-                response.writeHead(200, headers)
-                getDataFromDb(dbTodoList, response)
+                sendDataToClient(dbTodoList, response, headers)
                 return
             }
     
             if(request.method === 'POST' && urlRequest.pathname === '/todos/completeall'){
-                completeAllTasks(dbTodoList)
-                response.writeHead(200, headers)
-                getDataFromDb(dbTodoList, response)
-                return
+                let body = ''
+                request.on('data', (chunk) => {
+                    body += chunk.toString()
+                })
+                request.on('end', () => {
+                const parsedUpdateforTodo = JSON.parse(body)
+                completeAllTasks(dbTodoList, parsedUpdateforTodo.isCompletedAll)
+                sendDataToClient(dbTodoList, response, headers)
+                 })
+            return
             }
     
             response.writeHead(405, headers)
