@@ -125,7 +125,7 @@ async function sendDataToClient(dbTodoList, response, headers){
             return
             }
     
-            response.writeHead(405, headers)
+            response.writeHead(404, headers)
             response.end(`This form is not allowed for the request.`)
         }).listen(3000)
     })
