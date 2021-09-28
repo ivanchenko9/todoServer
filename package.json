@@ -4,8 +4,8 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js"
+    "start-js": "nodemon server.js",
+    "start-koa": "nodemon serverKoa.js"
   },
   "keywords": [
     "nodeJS",
@@ -19,6 +19,13 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "mongodb": "^4.1.1"
+    "dotenv": "^10.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "koa": "^2.13.3",
+    "koa-bodyparser": "^4.3.0",
+    "koa-passport": "^4.1.4",
+    "koa-router": "^10.1.1",
+    "mongodb": "^4.1.1",
+    "passport-jwt": "^4.0.0"
   }
 }
